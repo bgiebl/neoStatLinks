@@ -21,4 +21,215 @@
 			</OnEvent>
 		</Scripts>
 	</Frame>
+	
+	<!-- Settings Dialog -->
+	<Frame name="neoStatLinks_SettingsDialog" inherits="UIPanelBackdropFrame" parent="UIParent" hidden="true" enableMouse="true">
+		<Size><AbsDimension x="400" y="420"/></Size>
+		<Anchors><Anchor point="CENTER"/></Anchors>
+		<Scripts>
+			<OnMouseDown>this:StartMoving("CENTER")</OnMouseDown>
+			<OnMouseUp>this:StopMovingOrSizing()</OnMouseUp>
+		</Scripts>
+		<Layers>
+			<Layer level="BACKGROUND">
+				<Texture name="$parent_TitleImage" file="interface/addons/neoStatLinks/icons/logo_only_text.tga">
+					<Size><AbsDimension x="200" y="50"/></Size>
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeTo="neoStatLinks_SettingsDialog" relativePoint="TOPLEFT">
+							<Offset><AbsDimension x="50" y="-10"/></Offset>
+						</Anchor>
+					</Anchors>
+				</Texture>
+				<Texture name="$parent_Background" file="interface/addons/neoStatLinks/icons/background_image.png">
+					<Size><AbsDimension x="360" y="360"/></Size>
+					<Anchors><Anchor point="CENTER"/></Anchors>
+				</Texture>
+			</Layer>
+			<Layer level="ARTWORK">
+				<FontString name="neoStatLinks_SettingsTitle" inherits="Font_FrameTitle" text="">
+					<Anchors>
+						<Anchor point="LEFT" relativeTo="$parent_TitleImage" relativePoint="RIGHT">
+							<Offset><AbsDimension x="8" y="0"/></Offset>
+						</Anchor>
+					</Anchors>
+					<Color r="1" g="1" b="0"/>
+				</FontString>
+				<FontString name="neoStatLinks_SettingsMoreInfoLabel" inherits="GameFontNormal" text="" justifyH="RIGHT">
+					<Size><AbsDimension x="80" y="20"/></Size>
+					<Anchors>
+						<Anchor point="BOTTOMLEFT" relativeTo="$parent" relativePoint="BOTTOMRIGHT">
+							<Offset><AbsDimension x="-160" y="-100"/></Offset>
+						</Anchor>
+					</Anchors>
+					<Color r="1" g="0.84" b="0"/>
+				</FontString>
+				<FontString name="neoStatLinks_SettingsLanguageLabel" inherits="GameFontNormal" text="" justifyH="LEFT">
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeTo="$parent" relativePoint="TOPLEFT">
+							<Offset><AbsDimension x="20" y="220"/></Offset>
+						</Anchor>
+					</Anchors>
+					<Color r="1" g="1" b="1"/>
+				</FontString>
+				<FontString name="neoStatLinks_SettingsCleanTextLabel" inherits="GameFontNormal" text="" justifyH="LEFT">
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeTo="$parent" relativePoint="TOPLEFT">
+							<Offset><AbsDimension x="20" y="265"/></Offset>
+						</Anchor>
+					</Anchors>
+					<Color r="1" g="1" b="1"/>
+				</FontString>
+			</Layer>
+		</Layers>
+		<Frames>
+			<Button name="$parent_CloseButton" inherits="UIPanelCloseButtonTemplate">
+				<Anchors>
+					<Anchor point="TOPRIGHT">
+						<Offset><AbsDimension x="-3" y="3"/></Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>neoStatLinks_SettingsDialog:Hide()</OnClick>
+				</Scripts>
+			</Button>
+			<CheckButton name="neoStatLinks_ShowTierCheckbox" inherits="UIPanelCheckButtonTemplate">
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="$parent" relativePoint="TOPLEFT">
+						<Offset><AbsDimension x="20" y="70"/></Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer level="ARTWORK">
+						<FontString name="$parent_Text" inherits="GameFontNormal" text="">
+							<Anchors>
+								<Anchor point="LEFT" relativeTo="$parent" relativePoint="RIGHT">
+									<Offset><AbsDimension x="5" y="0"/></Offset>
+								</Anchor>
+							</Anchors>
+							<Color r="1" g="1" b="1"/>
+						</FontString>
+					</Layer>
+				</Layers>
+				<Scripts>
+					<OnClick>
+						neoStatLinks.OnShowTierCheckboxClick(this:IsChecked())
+					</OnClick>
+				</Scripts>
+			</CheckButton>
+			<CheckButton name="neoStatLinks_EnableAAHCheckbox" inherits="UIPanelCheckButtonTemplate">
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="$parent" relativePoint="TOPLEFT">
+						<Offset><AbsDimension x="20" y="120"/></Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer level="ARTWORK">
+						<FontString name="$parent_Text" inherits="GameFontNormal" text="">
+							<Anchors>
+								<Anchor point="LEFT" relativeTo="$parent" relativePoint="RIGHT">
+									<Offset><AbsDimension x="5" y="0"/></Offset>
+								</Anchor>
+							</Anchors>
+							<Color r="1" g="1" b="1"/>
+						</FontString>
+					</Layer>
+				</Layers>
+				<Scripts>
+					<OnClick>
+						neoStatLinks.OnEnableAAHCheckboxClick(this:IsChecked())
+					</OnClick>
+				</Scripts>
+			</CheckButton>
+			<CheckButton name="neoStatLinks_DebugCheckbox" inherits="UIPanelCheckButtonTemplate">
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="$parent" relativePoint="TOPLEFT">
+						<Offset><AbsDimension x="20" y="170"/></Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer level="ARTWORK">
+						<FontString name="$parent_Text" inherits="GameFontNormal" text="">
+							<Anchors>
+								<Anchor point="LEFT" relativeTo="$parent" relativePoint="RIGHT">
+									<Offset><AbsDimension x="5" y="0"/></Offset>
+								</Anchor>
+							</Anchors>
+							<Color r="1" g="1" b="1"/>
+						</FontString>
+					</Layer>
+				</Layers>
+				<Scripts>
+					<OnClick>
+						neoStatLinks.OnDebugCheckboxClick(this:IsChecked())
+					</OnClick>
+				</Scripts>
+			</CheckButton>
+			<Frame name="neoStatLinks_LanguageDropdown" inherits="UIDropDownMenuTemplate">
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="$parent" relativePoint="TOPLEFT">
+						<Offset><AbsDimension x="100" y="218"/></Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnLoad>
+						UIDropDownMenu_Initialize(this, neoStatLinks.LanguageDropdownInit)
+						UIDropDownMenu_SetWidth(this, 130)
+					</OnLoad>
+				</Scripts>
+			</Frame>
+			<EditBox name="$parent_CleanTextInput" inherits="UIPanelEditBoxTemplate" autoFocus="false" letters="20" historyLines="0" enableMouse="true">
+				<Size>
+					<AbsDimension x="180" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="$parent" relativePoint="TOPLEFT">
+						<Offset><AbsDimension x="30" y="283"/></Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						this:SetFocus()
+					</OnClick>
+					<OnEnterPressed>
+						neoStatLinks.OnCleanTextChanged()
+						this:ClearFocus()
+					</OnEnterPressed>
+					<OnEscapePressed>
+						this:ClearFocus()
+					</OnEscapePressed>
+				</Scripts>
+			</EditBox>
+			<Button name="$parent_CurseForgeButton" inherits="UIPanelButtonTemplate" text="">
+				<Size><AbsDimension x="130" y="22"/></Size>
+				<Anchors>
+					<Anchor point="TOP" relativeTo="neoStatLinks_SettingsMoreInfoLabel" relativePoint="BOTTOM">
+						<Offset><AbsDimension x="0" y="5"/></Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer level="ARTWORK">
+						<Texture name="$parent_Icon" file="interface/addons/neoStatLinks/icons/curseforge_logo.png">
+							<Anchors>
+								<Anchor point="LEFT">
+									<Offset><AbsDimension x="5" y="0"/></Offset>
+								</Anchor>
+							</Anchors>
+							<Size><AbsDimension x="20" y="20"/></Size>
+						</Texture>
+					</Layer>
+				</Layers>
+				<Scripts>
+					<OnClick>neoStatLinks.OpenCurseForgePage()</OnClick>
+					<OnEnter>
+						GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+						GameTooltip:SetFrameStrata("TOOLTIP")
+						GameTooltip:SetText(neoStatLinks.Locale.Get("CURSEFORGE_TOOLTIP"), 1, 1, 1)
+						GameTooltip:AddLine(neoStatLinks.Locale.Get("CURSEFORGE_URL"), 0.8, 0.8, 0.8)
+						GameTooltip:Show()
+					</OnEnter>
+					<OnLeave>GameTooltip:Hide()</OnLeave>
+				</Scripts>
+			</Button>
+		</Frames>
+	</Frame>
 </Ui>

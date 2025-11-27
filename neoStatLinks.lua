@@ -1,6 +1,86 @@
+-- Locale System (similar to TaboreaDreaming)
+local ROOT_PATH = "Interface/Addons/neoStatLinks"
+local LOCALE_PATH = ROOT_PATH.."/locales/"
+local DEFAULT_LANGUAGE = "EN"
+
+local function SafeLoadLocaleFile(path)
+	local chunk, err = loadfile(path)
+	if not chunk then
+		print(string.format("|cffff0000[neoStatLinks]|r Failed to load locale file: %s (%s)", tostring(path), tostring(err)))
+		return nil
+	end
+	local ok, data = pcall(chunk)
+	if not ok then
+		print(string.format("|cffff0000[neoStatLinks]|r Error executing locale file: %s (%s)", tostring(path), tostring(data)))
+		return nil
+	end
+	if type(data) ~= "table" then
+		return nil
+	end
+	return data
+end
+
+local function DetectLanguage()
+	if type(GetLanguage) == "function" then
+		local gameLang = GetLanguage()
+		if gameLang and gameLang ~= "" then
+			return string.upper(string.sub(gameLang, 1, 2))
+		end
+	end
+	return DEFAULT_LANGUAGE
+end
+
+local function MergeLocales(base, overlay)
+	if type(base) ~= "table" then
+		base = {}
+	end
+	if type(overlay) == "table" then
+		for key, value in pairs(overlay) do
+			base[key] = value
+		end
+	end
+	return base
+end
+
+local function LoadLocale(languageOverride)
+	local requested = languageOverride
+	if not requested or requested == "" or requested == "auto" then
+		requested = DetectLanguage()
+	else
+		requested = string.upper(string.sub(requested, 1, 2))
+	end
+
+	local base = SafeLoadLocaleFile(LOCALE_PATH.."BASE.lua") or {}
+	local overlay = SafeLoadLocaleFile(string.format("%s%s.lua", LOCALE_PATH, requested))
+
+	if not overlay and requested ~= DEFAULT_LANGUAGE then
+		overlay = SafeLoadLocaleFile(string.format("%s%s.lua", LOCALE_PATH, DEFAULT_LANGUAGE))
+	end
+
+	local merged = MergeLocales(base, overlay)
+
+	return requested, merged
+end
+
+local Locale = {}
+local LocaleTable = {}
+
+function Locale.Get(key)
+	return LocaleTable[key] or key
+end
+
+function Locale.Format(key, ...)
+	local text = Locale.Get(key)
+	if select("#", ...) > 0 then
+		return string.format(text, ...)
+	end
+	return text
+end
+
+local L = Locale
 
 neoStatLinks = {
-	Version = "0.1",
+	Version = "0.2",
 	Author = "Xcalmx",
 	Original_ChatEdit_AddItemLink = nil,
 	UsePyHook = false,
@@ -31,8 +111,52 @@ neoStatLinks = {
 		[227710] = true,
 		[227711] = true,
 	},
+	
+	-- Locale system
+	L = nil,
+	Locale = Locale,
 };
 
+-- Initialize locale system
+local function InitializeLocale()
+	local _, initialLocales = LoadLocale()
+	LocaleTable = initialLocales
+	neoStatLinks.L = initialLocales
+	neoStatLinks.Language = DetectLanguage()
+end
+
+function neoStatLinks.ReloadLocale(languageOverride)
+	local language, locales = LoadLocale(languageOverride)
+	LocaleTable = locales
+	neoStatLinks.L = locales
+	neoStatLinks.Language = language
+	if type(neoStatLinks.ApplyLocaleTexts) == "function" then
+		neoStatLinks.ApplyLocaleTexts()
+	end
+	return locales
+end
+
+function neoStatLinks.SetLanguage(language)
+	if language == nil or language == "" then
+		language = "auto"
+	end
+	local normalized
+	if language == "auto" or language == "AUTO" then
+		normalized = "auto"
+	else
+		normalized = string.upper(string.sub(language, 1, 2))
+	end
+	
+	if not neoStatLinksSettings then
+		neoStatLinksSettings = {}
+	end
+	neoStatLinksSettings.Language = normalized
+	SaveVariables("neoStatLinksSettings")
+	neoStatLinks.ReloadLocale(normalized)
+end
+
+-- Initialize locale system
+InitializeLocale()
 
 function neoStatLinks:parse_item_link(link)
 	if(not link) then
@@ -194,12 +318,194 @@ end
 
 function neoStatLinks.Enable()
 	neoStatLinksSettings.enabled = true;
-	DEFAULT_CHAT_FRAME:AddMessage("neoStatLinks has been enabled.");
+	DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_ENABLED"));
 end
 
 function neoStatLinks.Disable()
 	neoStatLinksSettings.enabled = false;
-	DEFAULT_CHAT_FRAME:AddMessage("neoStatLinks has been disabled.");
+	DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_DISABLED"));
+end
+
+function neoStatLinks.OpenCurseForgePage()
+	if GC_OpenWebRadio then
+		GC_OpenWebRadio(L.Get("CURSEFORGE_URL"))
+	end
+end
+
+function neoStatLinks.LanguageDropdownInit()
+	local currentValue = (neoStatLinksSettings and neoStatLinksSettings.Language) or "auto"
+	local current
+	if type(currentValue) == "string" then
+		local upper = string.upper(currentValue)
+		if upper == "AUTO" then
+			current = "auto"
+		else
+			current = string.upper(string.sub(upper, 1, 2))
+		end
+	else
+		current = "auto"
+	end
+
+	local function addOption(value, labelKey)
+		local info = {}
+		info.text = L.Get(labelKey)
+		info.func = function()
+			neoStatLinks.SetLanguage(value)
+		end
+		if value == "auto" then
+			info.checked = (current == "auto")
+		else
+			info.checked = (current == string.upper(value))
+		end
+		UIDropDownMenu_AddButton(info)
+	end
+
+	addOption("auto", "OPTION_LANGUAGE_DROPDOWN_AUTO")
+	addOption("EN", "OPTION_LANGUAGE_DROPDOWN_EN")
+	addOption("DE", "OPTION_LANGUAGE_DROPDOWN_DE")
+end
+
+function neoStatLinks.ApplyLocaleTexts()
+	if neoStatLinks_SettingsTitle then
+		neoStatLinks_SettingsTitle:SetText(L.Get("SETTINGS_TITLE_LABEL"))
+	end
+	if neoStatLinks_SettingsMoreInfoLabel then
+		neoStatLinks_SettingsMoreInfoLabel:SetText(L.Get("SETTINGS_MORE_INFO_LABEL"))
+	end
+	if neoStatLinks_SettingsLanguageLabel then
+		neoStatLinks_SettingsLanguageLabel:SetText(L.Get("SETTINGS_LANGUAGE_LABEL"))
+	end
+	if neoStatLinks_SettingsCleanTextLabel then
+		neoStatLinks_SettingsCleanTextLabel:SetText(L.Get("SETTINGS_CLEAN_TEXT_LABEL"))
+	end
+	if neoStatLinks_ShowTierCheckbox_Text then
+		neoStatLinks_ShowTierCheckbox_Text:SetText(L.Get("SETTINGS_SHOW_TIER"))
+	end
+	if neoStatLinks_EnableAAHCheckbox_Text then
+		neoStatLinks_EnableAAHCheckbox_Text:SetText(L.Get("SETTINGS_ENABLE_AAH"))
+	end
+	if neoStatLinks_DebugCheckbox_Text then
+		neoStatLinks_DebugCheckbox_Text:SetText(L.Get("SETTINGS_ENABLE_DEBUG"))
+	end
+	if neoStatLinks_SettingsDialog_CurseForgeButton then
+		neoStatLinks_SettingsDialog_CurseForgeButton:SetText(L.Get("CURSEFORGE_BUTTON"))
+	end
+	if neoStatLinks_LanguageDropdown then
+		local language = (neoStatLinksSettings and neoStatLinksSettings.Language) or "auto"
+		local labelKey
+		if language == "auto" or language == "AUTO" then
+			labelKey = "OPTION_LANGUAGE_DROPDOWN_AUTO"
+		elseif language == "DE" then
+			labelKey = "OPTION_LANGUAGE_DROPDOWN_DE"
+		elseif language == "EN" then
+			labelKey = "OPTION_LANGUAGE_DROPDOWN_EN"
+		else
+			labelKey = "OPTION_LANGUAGE_DROPDOWN_AUTO"
+		end
+		UIDropDownMenu_SetText(neoStatLinks_LanguageDropdown, L.Get(labelKey))
+	end
+end
+
+function neoStatLinks.ShowSettings()
+	if neoStatLinks_SettingsDialog and neoStatLinks_SettingsDialog:IsVisible() then
+		neoStatLinks_SettingsDialog:Hide()
+	elseif neoStatLinks_SettingsDialog then
+		-- Apply locale texts
+		if type(neoStatLinks.ApplyLocaleTexts) == "function" then
+			neoStatLinks.ApplyLocaleTexts()
+		end
+		
+		-- Refresh language dropdown text
+		if neoStatLinks_LanguageDropdown then
+			local language = (neoStatLinksSettings and neoStatLinksSettings.Language) or "auto"
+			local labelKey
+			if language == "auto" or language == "AUTO" then
+				labelKey = "OPTION_LANGUAGE_DROPDOWN_AUTO"
+			elseif language == "DE" then
+				labelKey = "OPTION_LANGUAGE_DROPDOWN_DE"
+			elseif language == "EN" then
+				labelKey = "OPTION_LANGUAGE_DROPDOWN_EN"
+			else
+				labelKey = "OPTION_LANGUAGE_DROPDOWN_AUTO"
+			end
+			UIDropDownMenu_SetText(neoStatLinks_LanguageDropdown, L.Get(labelKey))
+		end
+		
+		-- Set checkbox states
+		if neoStatLinks_ShowTierCheckbox then
+			if neoStatLinksSettings.showTier ~= false then
+				neoStatLinks_ShowTierCheckbox:SetChecked(true)
+			else
+				neoStatLinks_ShowTierCheckbox:SetChecked(false)
+			end
+		end
+		
+		if neoStatLinks_EnableAAHCheckbox then
+			if neoStatLinksSettings.enableAAH ~= false then
+				neoStatLinks_EnableAAHCheckbox:SetChecked(true)
+			else
+				neoStatLinks_EnableAAHCheckbox:SetChecked(false)
+			end
+		end
+		
+		if neoStatLinks_DebugCheckbox then
+			if neoStatLinksSettings.debug then
+				neoStatLinks_DebugCheckbox:SetChecked(true)
+			else
+				neoStatLinks_DebugCheckbox:SetChecked(false)
+			end
+		end
+		
+		-- Set clean text input value
+		if neoStatLinks_SettingsDialog_CleanTextInput then
+			local cleanText = (neoStatLinksSettings and neoStatLinksSettings.cleanText) or "Clean"
+			neoStatLinks_SettingsDialog_CleanTextInput:SetText(cleanText)
+		end
+		
+		neoStatLinks_SettingsDialog:Show()
+	end
+end
+
+function neoStatLinks.OnShowTierCheckboxClick(checked)
+	neoStatLinksSettings.showTier = (checked == true or checked == 1)
+	SaveVariables("neoStatLinksSettings")
+	if neoStatLinksSettings.showTier then
+		DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_TIER_ENABLED"));
+	else
+		DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_TIER_DISABLED"));
+	end
+end
+
+function neoStatLinks.OnEnableAAHCheckboxClick(checked)
+	neoStatLinksSettings.enableAAH = (checked == true or checked == 1)
+	SaveVariables("neoStatLinksSettings")
+	if neoStatLinksSettings.enableAAH then
+		DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_AAH_ENABLED"));
+	else
+		DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_AAH_DISABLED"));
+	end
+end
+
+function neoStatLinks.OnDebugCheckboxClick(checked)
+	neoStatLinksSettings.debug = (checked == true or checked == 1)
+	neoStatLinks.Debug = (checked == true or checked == 1)
+	SaveVariables("neoStatLinksSettings")
+	if neoStatLinksSettings.debug then
+		DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_DEBUG_ENABLED"));
+	else
+		DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_DEBUG_DISABLED"));
+	end
+end
+
+function neoStatLinks.OnCleanTextChanged()
+	local input = neoStatLinks_SettingsDialog_CleanTextInput
+	if not input then return end
+	
+	local cleanText = input:GetText()
+	if cleanText and cleanText ~= "" then
+		neoStatLinksSettings.cleanText = cleanText
+		SaveVariables("neoStatLinksSettings")
+	end
 end
 
 function neoStatLinks.DebugPrint(msg)
@@ -264,8 +570,13 @@ function neoStatLinks.RewriteLink(link)
 			local statName = neoStatLinks:_getStatName(item.stats[1]);
 			neoStatLinks.DebugPrint(string.format("  -> Single stat found: ID=%d, Name=%s", item.stats[1], statName or "nil"));
 			if statName then
-				-- Create the replacement text with tier: "[TX | Stat Name]"
-				replacementText = string.format("[T%d | %s]", tier, statName);
+				-- Create the replacement text with or without tier based on settings
+				local showTier = neoStatLinksSettings.showTier ~= false; -- default to true
+				if showTier then
+					replacementText = string.format("[T%d | %s]", tier, statName);
+				else
+					replacementText = string.format("[%s]", statName);
+				end
 				neoStatLinks.DebugPrint(string.format("  -> Manastone tier: %d (itemID: %d)", tier, item.itemID));
 			else
 				neoStatLinks.DebugPrint("  -> Failed to get stat name, link not rewritten");
@@ -273,7 +584,13 @@ function neoStatLinks.RewriteLink(link)
 		elseif statsCount == 0 then
 			-- Clean manastone (no stats)
 			neoStatLinks.DebugPrint("  -> Clean manastone detected (no stats)");
-			replacementText = string.format("[T%d | Clean]", tier);
+			local cleanText = (neoStatLinksSettings and neoStatLinksSettings.cleanText) or "Clean"
+			local showTier = neoStatLinksSettings.showTier ~= false; -- default to true
+			if showTier then
+				replacementText = string.format("[T%d | %s]", tier, cleanText);
+			else
+				replacementText = string.format("[%s]", cleanText);
+			end
 			neoStatLinks.DebugPrint(string.format("  -> Manastone tier: %d (itemID: %d)", tier, item.itemID));
 		else
 			neoStatLinks.DebugPrint(string.format("  -> Stats count is %d, not 0 or 1, skipping rewrite", statsCount));
@@ -322,14 +639,6 @@ function neoStatLinks.RewriteLink(link)
 			item.itemID, neoStatLinks.ManaStoneTier1ID, neoStatLinks.ManaStoneTier20ID));
 	end
 	
-	-- Not sure I actually want this...
-	--if(item and neoStatLinks.NameAndStat[item.itemID]) then
-	--	if(item.stats and #item.stats == 1) then
-	--		-- We have a stone with only one stat
-	--		local statName = neoStatLinks:_getStatName(item.stats[1]);
-	--		link = string.gsub(link, "%["..item.name.."%]", "["..item.name..": "..statName.."]");
-	--	end
-	--end
 	return(link);
 end
 
@@ -367,7 +676,7 @@ end
 function neoStatLinks.BrowseAddItemToList(pageNumber, itemIndex)
 	neoStatLinks.Original_BrowseAddItemToList(pageNumber, itemIndex);
 	
-	if(neoStatLinksSettings.enabled) then
+	if(neoStatLinksSettings.enabled and neoStatLinksSettings.enableAAH ~= false) then
 		local list = AuctionBrowseList.list
 		local index = #(AuctionBrowseList.list)
 		--Look specifically for Mana Stone items.
@@ -395,7 +704,7 @@ end
 function neoStatLinks.AAH3_BrowseAddItemToList(pageNumber, itemIndex)
 	neoStatLinks.Original_AAH3_BrowseAddItemToList(pageNumber, itemIndex);
 	
-	if(neoStatLinksSettings.enabled) then
+	if(neoStatLinksSettings.enabled and neoStatLinksSettings.enableAAH ~= false) then
 		local list = AAH.Browse.Results.list
 		local index = #(AAH.Browse.Results.list)
 		--Look specifically for Mana Stone items.
@@ -435,13 +744,15 @@ function neoStatLinks:OnEvent(event)
 				if neoStatLinksSettings.debug then
 					neoStatLinksSettings.debug = false;
 					neoStatLinks.Debug = false;
-					DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r Debug mode disabled.");
+					DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_DEBUG_DISABLED"));
 				else
 					neoStatLinksSettings.debug = true;
 					neoStatLinks.Debug = true;
-					DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r Debug mode enabled.");
+					DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[neoStatLinks]|r " .. L.Get("PRINT_DEBUG_ENABLED"));
 				end
 				SaveVariables("neoStatLinksSettings");
+			elseif command == "config" or command == "settings" then
+				neoStatLinks.ShowSettings();
 			else
 				neoStatLinks:Toggle();
 			end
@@ -450,14 +761,37 @@ function neoStatLinks:OnEvent(event)
 		if(not neoStatLinksSettings) then
 			neoStatLinksSettings = {
 				enabled = true,
-				debug = false
+				debug = false,
+				showTier = true,
+				enableAAH = true,
+				cleanText = "Clean"
 				};
 		end
+		-- Ensure new settings exist with defaults if missing
+		if neoStatLinksSettings.showTier == nil then
+			neoStatLinksSettings.showTier = true;
+		end
+		if neoStatLinksSettings.enableAAH == nil then
+			neoStatLinksSettings.enableAAH = true;
+		end
+		if neoStatLinksSettings.cleanText == nil then
+			neoStatLinksSettings.cleanText = "Clean";
+		end
+		
+		-- Load saved language preference or use auto
+		local savedLanguage = neoStatLinksSettings.Language or "auto"
+		neoStatLinks.ReloadLocale(savedLanguage)
+		
 		SaveVariables("neoStatLinksSettings");
 		
 		-- Set debug mode from settings
 		if neoStatLinksSettings.debug ~= nil then
 			neoStatLinks.Debug = neoStatLinksSettings.debug;
+		end
+		
+		-- Apply locale texts after UI is loaded
+		if type(neoStatLinks.ApplyLocaleTexts) == "function" then
+			neoStatLinks.ApplyLocaleTexts()
 		end
 		
 		neoStatLinks.DebugPrint("Initializing neoStatLinks - Hook setup starting");
@@ -547,10 +881,12 @@ function neoStatLinks:OnEvent(event)
 			description = "More readable stat item links",
 			icon = "interface/addons/neoStatLinks/icons/icon.png",
 			category = "Other",
-			configFrame = false, 
+			configFrame = neoStatLinks_SettingsDialog, 
 			slashCommand = "/neoStatLinks",
 			miniButton = false,
-			onClickScript = false,
+			onClickScript = function()
+				neoStatLinks.ShowSettings()
+			end,
 			disableScript = neoStatLinks.Disable,
 			enableScript = neoStatLinks.Enable,
 		    }
